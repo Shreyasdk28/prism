@@ -1,11 +1,15 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from composio_crewai import ComposioToolSet
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
 # https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
-composio_toolset = ComposioToolSet(api_key="vl3njj4fvt9a5uuu7s647d")
+composio_toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
 tools = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
 
 @CrewBase
