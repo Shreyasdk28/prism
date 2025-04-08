@@ -1,13 +1,13 @@
-research_task:
+item_find_task:
   description: >
     Search Indian e-commerce for {target_item} {item_details}.
   expected_output: >
     JSON list of products with Indian prices and links
     without ```json 
-  agent: researcher
+  agent: item_find
   output_file: output/results.json
 
-reporting_task:
+item_compare_task:
   description: >
     Generate actionable insights from search results with weighted scoring:
     - 40% feature compliance
@@ -22,6 +22,6 @@ reporting_task:
     4. Comparison matrix
     5. Fraud risk indicators
     without ```json 
-  agent: reporting_analyst
+  agent: compare_agent
   output_file: /output/final_decision.md
   

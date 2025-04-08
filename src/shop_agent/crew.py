@@ -21,17 +21,17 @@ class ShopAgent():
     # If you would like to add tools to your agents, you can learn more about it here:
     # https://docs.crewai.com/concepts/agents#agent-tools
     @agent
-    def researcher(self) -> Agent:
+    def item_find(self) -> Agent:
         return Agent(
-            config=self.agents_config['researcher'],
+            config=self.agents_config['item_find'],
             verbose=True,
             tools = tools,
         )
 
     @agent
-    def reporting_analyst(self) -> Agent:
+    def compare_agent(self) -> Agent:
         return Agent(
-            config=self.agents_config['reporting_analyst'],
+            config=self.agents_config['compare_agent'],
             verbose=True
         )
 
@@ -39,15 +39,15 @@ class ShopAgent():
     # task dependencies, and task callbacks, check out the documentation:
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
-    def research_task(self) -> Task:
+    def item_find_task(self) -> Task:
         return Task(
-            config=self.tasks_config['research_task'],
+            config=self.tasks_config['item_find_task'],
         )
 
     @task
-    def reporting_task(self) -> Task:
+    def item_compare_task(self) -> Task:
         return Task(
-            config=self.tasks_config['reporting_task'],
+            config=self.tasks_config['item_compare_task'],
             #output_file='report.md'
         )
 

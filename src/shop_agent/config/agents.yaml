@@ -1,4 +1,4 @@
-researcher:
+item_find:
   role: >
     {target_item} Parametric Hunter
   goal: >
@@ -12,7 +12,7 @@ researcher:
     niche variants of {target_item}. Your "Fuzzy Match Override" algorithm bridges gaps when 100% 
     matches don't exist.
 
-reporting_analyst:
+compare_agent:
   role: >
     {target_item} Decision Optimizer
   goal: >
