@@ -1,0 +1,27 @@
+research_task:
+  description: >
+    Search Indian e-commerce for {target_item} {item_details}.
+  expected_output: >
+    JSON list of products with Indian prices and links
+    without ```json 
+  agent: researcher
+  output_file: output/results.json
+
+reporting_task:
+  description: >
+    Generate actionable insights from search results with weighted scoring:
+    - 40% feature compliance
+    - 30% total cost (price + shipping)
+    - 20% delivery reliability
+    - 10% review authenticity
+  expected_output: >
+    report that contains:
+    1. "Best Value" pick with cost-per-feature breakdown
+    2. "Fastest Solution" for urgent needs
+    3. "Premium Choice" (highest rated)
+    4. Comparison matrix
+    5. Fraud risk indicators
+    without ```json 
+  agent: reporting_analyst
+  output_file: /output/final_decision.md
+  
