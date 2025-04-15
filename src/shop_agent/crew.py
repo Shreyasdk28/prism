@@ -2,6 +2,7 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from composio_crewai import ComposioToolSet
 from dotenv import load_dotenv
+from crewai_tools import ScrapegraphScrapeTool
 import os
 
 load_dotenv()
@@ -9,8 +10,10 @@ load_dotenv()
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
 # https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
+scrape_tool = ScrapegraphScrapeTool(api_key=os.getenv("SCRAPEGRAPH_API_KEY"))
 composio_toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
 tools = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
+tools.append(scrape_tool)
 
 @CrewBase
 class ShopAgent():
