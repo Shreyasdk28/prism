@@ -6,3 +6,5 @@ report.md
 README.md
 .composio.lock
 *.lock
+output/final_decision.json
+output/results.json

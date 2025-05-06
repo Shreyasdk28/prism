@@ -1,19 +1,63 @@
 from crewai.tools import BaseTool
 from typing import Type
 from pydantic import BaseModel, Field
+import requests
+import os
 
+# ------------------------------
+# Tool 1: Amazon Search by Query
+# ------------------------------
 
-class MyCustomToolInput(BaseModel):
-    """Input schema for MyCustomTool."""
-    argument: str = Field(..., description="Description of the argument.")
+class AmazonSearchInput(BaseModel):
+    query: str = Field(..., description="The search term to look up on Amazon.")
 
-class MyCustomTool(BaseTool):
-    name: str = "Name of my tool"
-    description: str = (
-        "Clear description for what this tool is useful for, your agent will need this information to use it."
-    )
-    args_schema: Type[BaseModel] = MyCustomToolInput
+def search_amazon(query: str) -> str:
+    url = "https://www.searchapi.io/api/v1/search"
+    params = {
+        "engine": "amazon_search",
+        "q": query,
+        "api_key": os.environ["AMAZON_SEARCH_API_KEY"]
+    }
 
-    def _run(self, argument: str) -> str:
-        # Implementation goes here
-        return "this is an example of a tool output, ignore it and move along."
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.text
+    else:
+        return f"Error: {response.status_code} - {response.text}"
+
+class AmazonSearchTool(BaseTool):
+    name: str = "Amazon Search"
+    description: str = "Searches Amazon for product listings based on a given query."
+    args_schema: Type[BaseModel] = AmazonSearchInput
+
+    def _run(self, query: str) -> str:
+        return search_amazon(query)
+
+# ------------------------------------
+# Tool 2: Amazon Product Details by ASIN
+# ------------------------------------
+
+class AmazonProductDetailInput(BaseModel):
+    asin: str = Field(..., description="The ASIN of the product to retrieve details for.")
+
+def get_amazon_product_details(asin: str) -> str:
+    url = "https://www.searchapi.io/api/v1/search"
+    params = {
+        "engine": "amazon_product",
+        "asin": asin,
+        "api_key": os.environ["AMAZON_SEARCH_API_KEY"]
+    }
+
+    response = requests.get(url, params=params)
+    if response.status_code == 200:
+        return response.text
+    else:
+        return f"Error: {response.status_code} - {response.text}"
+
+class AmazonProductDetailTool(BaseTool):
+    name: str = "Amazon Product Detail"
+    description: str = "Fetches detailed product info from Amazon using the ASIN."
+    args_schema: Type[BaseModel] = AmazonProductDetailInput
+
+    def _run(self, asin: str) -> str:
+        return get_amazon_product_details(asin)

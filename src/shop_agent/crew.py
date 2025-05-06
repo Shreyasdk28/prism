@@ -3,6 +3,7 @@ from crewai.project import CrewBase, agent, crew, task
 from composio_crewai import ComposioToolSet
 from dotenv import load_dotenv
 from crewai_tools import ScrapegraphScrapeTool
+from .tools.custom_tool import AmazonSearchTool, AmazonProductDetailTool
 import os
 
 load_dotenv()
@@ -14,6 +15,8 @@ scrape_tool = ScrapegraphScrapeTool(api_key=os.getenv("SCRAPEGRAPH_API_KEY"))
 composio_toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
 tools = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
 tools.append(scrape_tool)
+# tools.append(AmazonSearchTool())
+# tools.append(AmazonProductDetailTool())
 
 @CrewBase
 class ShopAgent():
