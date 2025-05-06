@@ -1,7 +1,6 @@
 .venv
 __pycache__/
 .DS_Store
-.env
 report.md
 README.md
 .composio.lock
