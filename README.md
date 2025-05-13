@@ -1,1 +1,1 @@
-# Agents-boiler-plate
+# Shop Agent

@@ -2,8 +2,8 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from composio_crewai import ComposioToolSet
 from dotenv import load_dotenv
-from crewai_tools import ScrapegraphScrapeTool
-from .tools.custom_tool import AmazonSearchTool, AmazonProductDetailTool
+# from crewai_tools import ScrapegraphScrapeTool
+from .tools.custom_tool import GoogleShoppingTool
 import os
 
 load_dotenv()
@@ -11,12 +11,14 @@ load_dotenv()
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
 # https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
-scrape_tool = ScrapegraphScrapeTool(api_key=os.getenv("SCRAPEGRAPH_API_KEY"))
+# scrape_tool = ScrapegraphScrapeTool(api_key=os.getenv("SCRAPEGRAPH_API_KEY"))
 composio_toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
-tools = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
-tools.append(scrape_tool)
+tool = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
+# tools.append(scrape_tool)
+# tools.append(ScraperApiTool())
 # tools.append(AmazonSearchTool())
 # tools.append(AmazonProductDetailTool())
+# tools=Crawl4AITool()
 
 @CrewBase
 class ShopAgent():
@@ -35,8 +37,16 @@ class ShopAgent():
         return Agent(
             config=self.agents_config['item_find'],
             verbose=True,
-            tools = tools,
+            tools = [GoogleShoppingTool()],
         )
+    
+    # @agent
+    # def scrape_agent(self) -> Agent:
+    #     return Agent(
+    #         config=self.agents_config['scrape_agent'],
+    #         verbose=True,
+    #         # tools = [Crawl4AILinkScraperTool()],
+    #     )
 
     @agent
     def compare_agent(self) -> Agent:
@@ -53,6 +63,12 @@ class ShopAgent():
         return Task(
             config=self.tasks_config['item_find_task'],
         )
+    
+    # @task
+    # def scrape_agent_task(self) -> Task:
+    #     return Task(
+    #         config=self.tasks_config['scrape_agent_task'],
+    #     )
 
     @task
     def item_compare_task(self) -> Task:

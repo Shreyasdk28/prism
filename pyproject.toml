@@ -8,6 +8,11 @@ dependencies = [
     "crewai[tools]>=0.108.0,<1.0.0",
     "composio-crewai (>=0.7.14,<0.8.0)",
     "scrapegraph-py>=1.12.0",
+    "selenium>=4.32.0",
+    "webdriver-manager>=4.0.2",
+    "crawl4ai>=0.6.2",
+    "serpapi>=0.1.5",
+    "google-search-results>=2.4.2",
 ]
 
 [project.scripts]
