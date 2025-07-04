@@ -1,91 +1,91 @@
 #!/usr/bin/env python
-import sys
-import warnings
-
+import sys, os, warnings, uuid, json
 from datetime import datetime
-
 from shop_agent.crew import ShopAgent
+from shop_agent.memory import memory_manager
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
-# This main file is intended to be a way for you to run your
-# crew locally, so refrain from adding unnecessary logic into this file.
-# It will loop until the user types 'exit' at the product category prompt.
+def get_user_preferences(user_id: str, item_name: str):
+    path = "knowledge/user_preferences.json"
+    if not os.path.exists(path):
+        return None
+    try:
+        with open(path, 'r') as f:
+            all_prefs = json.load(f)
+        return all_prefs.get(user_id, {}).get(item_name)
+    except json.JSONDecodeError:
+        return None
 
 def get_user_input():
-    """Get structured input from user with enhanced prompts"""
-    product = input("Product category (e.g., wireless earbuds) or type 'exit' to quit: ").strip()
+    product = input(
+        "Product category (e.g., wireless earbuds) or type 'exit' to quit: "
+    ).strip()
     if product.lower() == 'exit':
         return None
     details = input("Describe your needs (color, budget, must-have features): ").strip()
     return {'target_item': product, 'item_details': details}
 
-
 def run():
-    """
-    Run the crew in a loop until user exits.
-    """
+    session_user_id = str(uuid.uuid4())
+    print(f"💡 New session: {session_user_id}\n")
+
+    # **Clear short-term memory once at session start**
+    memory_manager.clear_short()
+
     while True:
         try:
             user_data = get_user_input()
             if user_data is None:
                 print("\n👋 Exiting Smart Shopping Assistant. Goodbye!")
+                memory_manager.clear_episodes()
+                memory_manager.clear_short()  # clear all before exit
+                print("🧠 Episodic and short-term memory cleared.\n")
                 break
 
             start_time = datetime.now()
-            print(f"\n🔍 Analyzing requirements for {user_data['target_item']}:")
-            print(f"   - Specifications: {user_data['item_details']}")
-            print("   - Searching...\n")
 
-            ShopAgent().crew().kickoff(inputs={
+            # Load & inject memories
+            long_prefs = get_user_preferences(session_user_id, user_data['target_item'])
+            episode_history = memory_manager.get_episodes(session_user_id)
+            short_term = memory_manager.short_term  # now holds last_final_items if present
+
+            print(f"\n🔍 Searching for {user_data['target_item']} with specs: {user_data['item_details']}")
+            print(f"   • Injected long-term prefs: {long_prefs}")
+            print(f"   • Last final_items in short-term: {bool(short_term.get('last_final_items'))}")
+            print(f"   • Episode history count: {len(episode_history)}\n")
+
+            # Kick off the pipeline
+            raw_output = ShopAgent().crew().kickoff(inputs={
                 'target_item': user_data['target_item'],
-                'item_details': user_data['item_details']
+                'item_details': user_data['item_details'],
+                'short_term': short_term,
+                'long_term_preferences': long_prefs,
+                'episode_history': episode_history
             })
+
+            final_items = getattr(raw_output, 'result', None) or str(raw_output)
+            print("\n🔖 Final Recommendations:\n")
+            print(final_items)
+
+            # Snapshot episode
+            episode = {
+                'user_id': session_user_id,
+                'query': user_data['target_item'],
+                'item_details': user_data['item_details'],
+                'final_items': final_items,
+                'timestamp': datetime.now().isoformat()
+            }
+            memory_manager.append_episode(episode)
+
+            # **Store this iteration’s final_items in short-term for next query**
+            memory_manager.write_short('last_final_items', final_items)
 
             elapsed = (datetime.now() - start_time).total_seconds()
             print(f"\n✅ Completed in {elapsed:.1f}s\n")
 
         except Exception as e:
             print(f"\n❌ Error: {e}", file=sys.stderr)
-            # Continue loop on error
-
-
-def train():
-    """
-    Train the crew for a given number of iterations.
-    """
-    inputs = {
-        "topic": "AI LLMs"
-    }
-    try:
-        ShopAgent().crew().train(n_iterations=int(sys.argv[1]), filename=sys.argv[2], inputs=inputs)
-    except Exception as e:
-        raise Exception(f"An error occurred while training the crew: {e}")
-
-
-def replay():
-    """
-    Replay the crew execution from a specific task.
-    """
-    try:
-        ShopAgent().crew().replay(task_id=sys.argv[1])
-    except Exception as e:
-        raise Exception(f"An error occurred while replaying the crew: {e}")
-
-
-def test():
-    """
-    Test the crew execution and returns the results.
-    """
-    inputs = {
-        "topic": "AI LLMs",
-        "current_year": str(datetime.now().year)
-    }
-    try:
-        ShopAgent().crew().test(n_iterations=int(sys.argv[1]), openai_model_name=sys.argv[2], inputs=inputs)
-    except Exception as e:
-        raise Exception(f"An error occurred while testing the crew: {e}")
-
 
 if __name__ == "__main__":
     run()

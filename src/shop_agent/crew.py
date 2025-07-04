@@ -4,6 +4,7 @@ from composio_crewai import ComposioToolSet
 from dotenv import load_dotenv
 # from crewai_tools import ScrapegraphScrapeTool
 from .tools.custom_tool import GoogleShoppingTool
+from .models.model import UserPreference
 import os
 
 load_dotenv()
@@ -32,6 +33,15 @@ class ShopAgent():
 
     # If you would like to add tools to your agents, you can learn more about it here:
     # https://docs.crewai.com/concepts/agents#agent-tools
+
+    @agent
+    def preference_extraction_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['preference_extraction_agent'],
+            verbose=True,
+            # tools=tool,  # Using ComposioToolSet for SERPAPI_SEARCH
+        )
+    
     @agent
     def item_find(self) -> Agent:
         return Agent(
@@ -40,14 +50,6 @@ class ShopAgent():
             tools = [GoogleShoppingTool()],
         )
     
-    # @agent
-    # def scrape_agent(self) -> Agent:
-    #     return Agent(
-    #         config=self.agents_config['scrape_agent'],
-    #         verbose=True,
-    #         # tools = [Crawl4AILinkScraperTool()],
-    #     )
-
     @agent
     def compare_agent(self) -> Agent:
         return Agent(
@@ -59,17 +61,19 @@ class ShopAgent():
     # task dependencies, and task callbacks, check out the documentation:
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
     @task
+    def preference_extraction_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['preference_extraction_task'],
+            output_pydantic=UserPreference, 
+            # output_file='preferences.json'  # Uncomment if you want to save preferences
+        )
+    
+    @task
     def item_find_task(self) -> Task:
         return Task(
             config=self.tasks_config['item_find_task'],
         )
     
-    # @task
-    # def scrape_agent_task(self) -> Task:
-    #     return Task(
-    #         config=self.tasks_config['scrape_agent_task'],
-    #     )
-
     @task
     def item_compare_task(self) -> Task:
         return Task(

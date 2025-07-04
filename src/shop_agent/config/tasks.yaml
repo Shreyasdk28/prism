@@ -1,17 +1,37 @@
+preference_extraction_task:
+  description: >
+    Parse the user’s input to extract structured preferences for the specified {target_item}.
+    Identify and capture:
+      – Desired color(s) (if any)
+      – Brand(s) (if any)
+      – Budget constraints (if any)
+      – Must-have features
+  expected_output: >
+    A JSON object (or dict) with the following keys:
+      1. “item”: the original {target_item}
+      2. “brand”: list of brand names or `null` if not implied
+      3. “preferred_colors”: list of color names or `null` if not mentioned
+      4. “budget”: object with “min” and “max” or `null` for no budget
+         - “min”: minimum price or `null` if not specified
+         - “max”: maximum price or `null` if not specified
+      5. “features”: list of feature keywords or `null` if none
+    You may infer from direct mention or common phrasing (e.g., “some black boAt earbuds” means brand=boAt, color=black).
+    Avoid guessing based on trends. Do not include preferences the user didn’t mention or imply.
+  agent: preference_extraction_agent
+  output_file: knowledge/user_preferences.json
+
 item_find_task:
   description: >
-    Step 1: If needed improve the user-provided item description “{item_details}” using natural language to make it
-    more suitable for e-commerce search also Use only raw strings for tool input arguments make sure you include important
-    item_details like brand, model, color, size, and any other relevant specifications.Do not include type or description fields.
-    while giving the input to the tool the format should be like this:
+    Step 1: If needed, improve the user-provided item description “{item_details}” using natural language to make it
+    more suitable for e-commerce search. Also use only raw strings for tool input arguments. Make sure you include important
+    item_details like brand, model, color, size, and any other relevant specifications. Do not include type or description fields.
+    While giving the input to the tool, the format should be like this:
     "query": "wireless earphones under 1500 INR"
     "location": "India"
-
     Not like this:
     "query": {{"description": "wireless...000 INR", "type": "str"}}
     "location": {{"description": "India", "type": "str"}}
 
-    
     Step 2: Use the refined description to query Google Shopping via SerpAPI for “{target_item}”.
 
     Step 3: From the results, collect structured product data:
@@ -24,6 +44,13 @@ item_find_task:
 
     Ensure that only products from Indian e-commerce sources are included, and the results closely match
     the user’s refined criteria.
+
+    If available, also incorporate memory context:
+    - Long-term preferences like preferred brands, features, budget ranges: {long_term_preferences}
+    - Session-specific short-term refinements (if present): {short_term}
+
+    Use this memory to improve relevance of the refined query and ensure the best matching results are retrieved.
+ #   - Past episodes of similar product searches: {episode_history}
 
   expected_output: >
     A JSON array of dictionaries. Each dictionary must contain:
@@ -39,41 +66,35 @@ item_find_task:
   output_file: output/results.json
 
 
-
-
-# scrape_agent_task:
-#   description: >
-#     For each URL in the input list, navigate to the product page and extract
-#     detailed product data fields (title, price, specs, ratings).
-#     Ensure JavaScript‑rendered content is fully loaded before extraction.
-#   expected_output: >
-#     A JSON array of objects, each with keys:
-#       - title (string)
-#       - price (number or string with currency)
-#       - specifications (object of attribute→value)
-#       - rating (number)
-#       - review_count (integer)
-#     Do not include code fences or markdown.
-#   agent: scrape_agent
-#   depends_on:
-#     - item_find_task
-#   output_file: output/results.json
-
 item_compare_task:
   description: >
-    Analyze shopping results using available metadata to generate ranked product insights and list top 5 products or less.
-    Make sure the top products you will mention have item_details like brand, model, color, size, and any other relevant specifications
-    close to mentioned in the user-provided item description “{item_details}”.
+    Analyze shopping results using available metadata to generate ranked product insights and list top 5 products or fewer.
+    
+    Primary context:
+    - Current user description: "{item_details}"
+    - Current product category: "{target_item}"
+    
+    Memory-enhanced context:
+    - Use user preferences from long-term memory if available: {long_term_preferences}
+    - Reference short-term memory to maintain continuity within this session: {short_term}
+    Combine all relevant memory sources with current inputs to ensure personalized, high-quality recommendations.
+    Prioritize matches on features like brand, color, price, delivery, and quality as inferred from both query and memory.
+   # - You may also use episodic memory (prior queries and decisions): {episode_history}
+
+   # Combine all relevant memory sources with current inputs to ensure personalized, high-quality recommendations.
+   # Prioritize matches on features like brand, color, price, delivery, and quality as inferred from both query and memory.
+    
   expected_output: >
     A markdown report that contains top 5 product recommendations based on the analysis.
     Each recommendation should include:
-    1. Hyperlinked list of top 5 products that closely fits the item description with price and source
-    2. "Best Value" pick with justification
-    3. "Fastest Delivery" option using the delivery field
-    4. "Top Rated" pick based on price and rating
-    5. Comparison matrix of price and delivery info
-    Do not wrap in markdown or code fences.
+    1. Hyperlinked list of top 5 products that closely fit the item description with price and source.
+    2. A "Best Value" pick with justification.
+    3. A "Fastest Delivery" option using the delivery field.
+    4. A "Top Rated" pick based on price and rating.
+    5. A comparison matrix showing price and delivery details of all products.
+    Do not wrap the report in markdown or code fences.
   agent: compare_agent
   output_file: output/final_decision.md
+
 
   
