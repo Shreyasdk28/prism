@@ -110,6 +110,33 @@ class MemoryManager:
         Returns None if not found.
         """
         return self.long_term.get(user_id, {}).get(key)
+    
+    def send_message(self, from_agent: str, to_agent: str, message: str):
+        """Send a message from one agent to another (messages are queued)."""
+        if not hasattr(self, 'messages'):
+            self.messages = {}
+        if to_agent not in self.messages:
+            self.messages[to_agent] = []
+        self.messages[to_agent].append({'from': from_agent, 'message': message})
+
+    def get_messages(self, agent_name: str):
+        """Retrieve and clear messages for an agent."""
+        if not hasattr(self, 'messages'):
+            self.messages = {}
+        msgs = self.messages.get(agent_name, [])
+        self.messages[agent_name] = []
+        return msgs
+
+    def share_data(self, key: str, value):
+        """Store arbitrary shared data accessible to all agents."""
+        if not hasattr(self, 'shared_data'):
+            self.shared_data = {}
+        self.shared_data[key] = value
+
+    def get_shared_data(self, key: str):
+        if not hasattr(self, 'shared_data'):
+            self.shared_data = {}
+        return self.shared_data.get(key)
 
 # Provide a module-level singleton instance
 memory_manager = MemoryManager()
