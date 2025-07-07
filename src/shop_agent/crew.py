@@ -1,8 +1,8 @@
 from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
-from composio_crewai import ComposioToolSet
+#from composio_crewai import ComposioToolSet
 from dotenv import load_dotenv
-# from crewai_tools import ScrapegraphScrapeTool
+#from crewai_tools import ScrapegraphScrapeTool
 from .tools.custom_tool import GoogleShoppingTool
 from .models.model import UserPreference
 import os
@@ -13,8 +13,9 @@ load_dotenv()
 # you can use the @before_kickoff and @after_kickoff decorators
 # https://docs.crewai.com/concepts/crews#example-crew-class-with-decorators
 # scrape_tool = ScrapegraphScrapeTool(api_key=os.getenv("SCRAPEGRAPH_API_KEY"))
-composio_toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
-tool = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
+#composio_toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
+##tool = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
+tool=[]
 # tools.append(scrape_tool)
 # tools.append(ScraperApiTool())
 # tools.append(AmazonSearchTool())
