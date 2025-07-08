@@ -28,7 +28,7 @@ def get_user_input():
 
 def run():
     session_user_id = str(uuid.uuid4())
-    print(f"💡 New session: {session_user_id}\n")
+    print(f"\U0001F4A1 New session: {session_user_id}\n")
 
     # **Clear short-term memory once at session start**
     memory_manager.clear_short()
@@ -37,10 +37,10 @@ def run():
         try:
             user_data = get_user_input()
             if user_data is None:
-                print("\n👋 Exiting Smart Shopping Assistant. Goodbye!")
+                print("\n\U0001F44B Exiting Smart Shopping Assistant. Goodbye!")
                 memory_manager.clear_episodes()
                 memory_manager.clear_short()  # clear all before exit
-                print("🧠 Episodic and short-term memory cleared.\n")
+                print("\U0001F9E0 Episodic and short-term memory cleared.\n")
                 break
 
             start_time = datetime.now()
@@ -50,7 +50,7 @@ def run():
             episode_history = memory_manager.get_episodes(session_user_id)
             short_term = memory_manager.short_term  # now holds last_final_items if present
 
-            print(f"\n🔍 Searching for {user_data['target_item']} with specs: {user_data['item_details']}")
+            print(f"\n\U0001F50D Searching for {user_data['target_item']} with specs: {user_data['item_details']}")
             print(f"   • Injected long-term prefs: {long_prefs}")
             print(f"   • Last final_items in short-term: {bool(short_term.get('last_final_items'))}")
             print(f"   • Episode history count: {len(episode_history)}\n")
@@ -65,7 +65,7 @@ def run():
             })
 
             final_items = getattr(raw_output, 'result', None) or str(raw_output)
-            print("\n🔖 Final Recommendations:\n")
+            print("\n\U0001F516 Final Recommendations:\n")
             print(final_items)
 
             # Snapshot episode
@@ -97,7 +97,7 @@ def run():
 
             # Push to MongoDB using the output_push_agent if outputs exist
             if results_json or final_decision_md:
-                print("\n📦 Pushing outputs to MongoDB ...")
+                print("\n\U0001F4E6 Pushing outputs to MongoDB ...")
                 ShopAgent().output_push_agent().run(
                     target_item=user_data['target_item'],
                     results_json=results_json,

@@ -5,13 +5,24 @@ from .tools.custom_tool import GoogleShoppingTool
 from .models.model import UserPreference
 from .memory import memory_manager  # Import the MemoryManager singleton
 import os
+import yaml
 
 load_dotenv()
+
+
+base_dir = os.path.dirname(os.path.abspath(__file__))
+config_dir = os.path.join(base_dir, 'config')
+agents_path = os.path.join(config_dir, 'agents.yaml')
+tasks_path = os.path.join(config_dir, 'tasks.yaml')
 
 # -- Agent base class with cross-agent memory protocol --
 class AgentWithMemory:
     def __init__(self, name):
         self.name = name
+
+    def run(self, **kwargs):
+        # Default fallback or pass, can log or handle here if needed
+        pass
 
     def send_message(self, to_agent, message):
         memory_manager.send_message(self.name, to_agent, message)
@@ -24,17 +35,19 @@ class AgentWithMemory:
     
     def get_shared_data(self, key):
         return memory_manager.get_shared_data(key)
-
+    
+    
 @CrewBase
 class ShopAgent():
     """ShopAgent crew with cross-agent memory protocol"""
 
-    agents_config = 'config/agents.yaml'
-    tasks_config = 'config/tasks.yaml'
-
+    def __init__(self):
+        with open(agents_path,encoding="utf-8") as f:
+            self.agents_config = yaml.safe_load(f)
+        with open(tasks_path,encoding="utf-8") as f:
+            self.tasks_config = yaml.safe_load(f)
     @agent
     def preference_extraction_agent(self) -> Agent:
-        # Inherit from AgentWithMemory to expose memory protocol
         class PreferenceExtractionAgent(AgentWithMemory):
             def __init__(self):
                 super().__init__('preference_extraction_agent')
@@ -44,6 +57,7 @@ class ShopAgent():
                 # Example: share user preferences for all agents
                 self.share_data('user_prefs', kwargs.get('user_prefs'))
                 # ...your agent logic...
+                # (the base class run is now a pass, so this is safe)
                 return super().run(**kwargs)
         return Agent(
             config=self.agents_config['preference_extraction_agent'],
@@ -90,7 +104,6 @@ class ShopAgent():
             base_class=CompareAgent
         )
 
-
     @agent
     def output_push_agent(self) -> Agent:
         class OutputPushAgent(AgentWithMemory):
@@ -118,7 +131,6 @@ class ShopAgent():
             verbose=True,
             base_class=OutputPushAgent
         )
-
 
     @task
     def preference_extraction_task(self) -> Task:
