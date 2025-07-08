@@ -90,6 +90,36 @@ class ShopAgent():
             base_class=CompareAgent
         )
 
+
+    @agent
+    def output_push_agent(self) -> Agent:
+        class OutputPushAgent(AgentWithMemory):
+            def __init__(self):
+                super().__init__('output_push_agent')
+            def run(self, **kwargs):
+                from .db import MongoDBClient
+                import json
+                mongo_client = MongoDBClient()
+                target_item = kwargs.get('target_item')
+                results_json = kwargs.get('results_json')
+                final_decision_md = kwargs.get('final_decision_md')
+
+                # Prepare the data to insert
+                record = {
+                    "target_item": target_item,
+                    "results_json": results_json,
+                    "final_decision_md": final_decision_md
+                }
+                mongo_client.insert_output("shop_outputs", record)
+                print("✅ Output pushed to MongoDB.")
+                return {"status": "success"}
+        return Agent(
+            config=self.agents_config['output_push_agent'],
+            verbose=True,
+            base_class=OutputPushAgent
+        )
+
+
     @task
     def preference_extraction_task(self) -> Task:
         return Task(

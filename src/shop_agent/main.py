@@ -81,6 +81,29 @@ def run():
             # **Store this iteration’s final_items in short-term for next query**
             memory_manager.write_short('last_final_items', final_items)
 
+            # --- MongoDB Output Push Section ---
+            # Read output files if they exist
+            results_json, final_decision_md = None, None
+            try:
+                with open("output/results.json") as f:
+                    results_json = f.read()
+            except Exception:
+                results_json = None
+            try:
+                with open("output/final_decision.md") as f:
+                    final_decision_md = f.read()
+            except Exception:
+                final_decision_md = None
+
+            # Push to MongoDB using the output_push_agent if outputs exist
+            if results_json or final_decision_md:
+                print("\n📦 Pushing outputs to MongoDB ...")
+                ShopAgent().output_push_agent().run(
+                    target_item=user_data['target_item'],
+                    results_json=results_json,
+                    final_decision_md=final_decision_md
+                )
+
             elapsed = (datetime.now() - start_time).total_seconds()
             print(f"\n✅ Completed in {elapsed:.1f}s\n")
 
