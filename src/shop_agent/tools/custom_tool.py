@@ -51,3 +51,87 @@ class GoogleShoppingTool(BaseTool):
             })
 
         return json.dumps(clean_results, ensure_ascii=False, indent=2)
+    
+from typing import Optional
+from pydantic import ConfigDict
+from qdrant_client import QdrantClient
+from sentence_transformers import SentenceTransformer
+import os
+from uuid import uuid4
+from typing import List, Type
+
+from pydantic import BaseModel
+
+class QdrantUpsertInput(BaseModel):
+    user_id: str
+    query: str
+    item_details: str
+    final_items: List[str]
+    timestamp: str
+    description: str
+
+class QdrantCustomUpsertTool(BaseTool):
+    name: str = "qdrant_upsert_tool"
+    description: str = (
+        "Upserts a shopping episode into the Qdrant vector DB using a local embedding model. "
+        "Input should be a dict with: user_id, query, item_details, final_items, timestamp."
+    )
+    args_schema: Type[BaseModel] = QdrantUpsertInput 
+
+    # Allow QdrantClient and SentenceTransformer as arbitrary types for Pydantic
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    qdrant: Optional[QdrantClient] = None
+    collection: Optional[str] = None
+    embedder: Optional[SentenceTransformer] = None
+
+    def __init__(self):
+        super().__init__()
+        self.qdrant = QdrantClient(
+            url=os.getenv("QDRANT_URL"),
+            api_key=os.getenv("QDRANT_API_KEY")
+        )
+        self.collection = "shopping_episodes"
+        self.embedder = SentenceTransformer("all-MiniLM-L6-v2")  # 384-dim embeddings
+        # self.ensure_collection(vector_size=384)
+
+    # def ensure_collection(self, vector_size: int):
+    #     existing_collections = self.qdrant.get_collections().collections
+    #     if self.collection not in existing_collections:
+    #         self.qdrant.recreate_collection(
+    #             collection_name=self.collection,
+    #             vectors_config={"size": vector_size, "distance": "Cosine"},
+    #         )
+
+    def _run(
+        self,
+        user_id: str,
+        query: str,
+        item_details: str,
+        final_items: str,
+        timestamp: str,
+        description: str,
+        **kwargs
+    ) -> str:
+
+        if not user_id or not query or not timestamp:
+            return "Error: 'user_id', 'query' and 'timestamp' are required fields."
+
+        vector = self.embedder.encode(query).tolist()
+
+        point = {
+            "id": str(uuid4()),  # Generate a unique ID for the point
+            "vector": vector,
+            "payload": {
+                "user_id": user_id,
+                "query": query,
+                "item_details": item_details,
+                "final_items": final_items,
+                "timestamp": timestamp,
+                "description": description,
+            },
+        }
+
+        self.qdrant.upsert(collection_name=self.collection, points=[point])
+
+        return "Data upserted to Qdrant successfully"

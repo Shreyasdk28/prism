@@ -4,10 +4,14 @@ from composio_crewai import ComposioToolSet
 from dotenv import load_dotenv
 # from crewai_tools import ScrapegraphScrapeTool
 from .tools.custom_tool import GoogleShoppingTool
-from .models.model import UserPreference
+from shop_agent.tools.vector_tools import ShoppingMemorySearchTool
+from .models.model import UserPreference, ExtractedProductNames
+from typing import List
 import os
 
 load_dotenv()
+
+vector_query_tool = ShoppingMemorySearchTool()
 
 # If you want to run a snippet of code before or after the crew starts,
 # you can use the @before_kickoff and @after_kickoff decorators
@@ -33,6 +37,13 @@ class ShopAgent():
 
     # If you would like to add tools to your agents, you can learn more about it here:
     # https://docs.crewai.com/concepts/agents#agent-tools
+    @agent
+    def memory_query_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['memory_query_agent'],
+            verbose=True,
+            tools=[vector_query_tool],
+        )
 
     @agent
     def preference_extraction_agent(self) -> Agent:
@@ -56,10 +67,27 @@ class ShopAgent():
             config=self.agents_config['compare_agent'],
             verbose=True
         )
+    
+    @agent
+    def markdown_parser_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['markdown_parser_agent'],
+            verbose=True,
+            # tools=[MarkdownParserTool()]  # Uncomment if you have a Markdown parser tool
+        )
 
     # To learn more about structured task outputs,
     # task dependencies, and task callbacks, check out the documentation:
     # https://docs.crewai.com/concepts/tasks#overview-of-a-task
+    
+    @task
+    def memory_query_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['memory_query_task'],
+            # output_pydantic=EpisodeList
+
+        )
+    
     @task
     def preference_extraction_task(self) -> Task:
         return Task(
@@ -80,7 +108,15 @@ class ShopAgent():
             config=self.tasks_config['item_compare_task'],
             #output_file='report.md'
         )
-
+    
+    @task
+    def markdown_extraction_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['markdown_extraction_task'],
+            output_pydantic=ExtractedProductNames,
+            # output_file='parsed_report.json'  # Uncomment if you want to save parsed report
+        )
+    
     @crew
     def crew(self) -> Crew:
         """Creates the ShopAgent crew"""

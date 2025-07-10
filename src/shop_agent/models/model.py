@@ -1,6 +1,6 @@
 from typing import List, Optional
 from pydantic import BaseModel, Field
-
+from datetime import datetime
 
 class Budget(BaseModel):
     min: Optional[float] = Field(None, description="Minimum budget")
@@ -24,3 +24,10 @@ class UserPreference(BaseModel):
                 "features": ["wireless", "noise cancellation"]
             }
         }
+
+class ExtractedProductNames(BaseModel):
+    items: List[str] = Field(
+        ...,
+        description="A list of product names extracted from the markdown file"
+    )
+

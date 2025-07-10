@@ -3,6 +3,7 @@ import sys, os, warnings, uuid, json
 from datetime import datetime
 from shop_agent.crew import ShopAgent
 from shop_agent.memory import memory_manager
+from shop_agent.tools.custom_tool import QdrantCustomUpsertTool 
 
 warnings.filterwarnings("ignore", category=SyntaxWarning, module="pysbd")
 
@@ -27,65 +28,94 @@ def get_user_input():
     return {'target_item': product, 'item_details': details}
 
 def run():
-    session_user_id = str(uuid.uuid4())
-    print(f"💡 New session: {session_user_id}\n")
+     # 🔤 Ask for a consistent user identifier
+    username = input("👤 Enter your username: ").strip().lower()
+    session_user_id = str(uuid.uuid5(uuid.NAMESPACE_DNS, username))
+    print(f"💡 Session started for user: {username} (UUID: {session_user_id})\n")
 
-    # **Clear short-term memory once at session start**
     memory_manager.clear_short()
+
+    episodes = []  # 🧠 Store all shopping episodes here
+    qdrant_tool = QdrantCustomUpsertTool()  # 🔧 One-time init
 
     while True:
         try:
             user_data = get_user_input()
             if user_data is None:
                 print("\n👋 Exiting Smart Shopping Assistant. Goodbye!")
-                memory_manager.clear_episodes()
-                memory_manager.clear_short()  # clear all before exit
-                print("🧠 Episodic and short-term memory cleared.\n")
+                memory_manager.clear_short()
+                print("🧠 Short-term memory cleared.\n")
+
+                # ✅ Upload all episodes at once
+                print("🧠 Uploading session memory to Qdrant...\n")
+                for episode in episodes:
+                    result = qdrant_tool._run(**episode)
+                    print(f"🟢 Upsert status: {result}")
+
+                print(f"✅ Uploaded {len(episodes)} episodes.\n")
                 break
 
             start_time = datetime.now()
 
-            # Load & inject memories
             long_prefs = get_user_preferences(session_user_id, user_data['target_item'])
-            episode_history = memory_manager.get_episodes(session_user_id)
-            short_term = memory_manager.short_term  # now holds last_final_items if present
+            short_term = memory_manager.short_term
 
             print(f"\n🔍 Searching for {user_data['target_item']} with specs: {user_data['item_details']}")
             print(f"   • Injected long-term prefs: {long_prefs}")
-            print(f"   • Last final_items in short-term: {bool(short_term.get('last_final_items'))}")
-            print(f"   • Episode history count: {len(episode_history)}\n")
+            print(f"   • Last final_items in short-term: {bool(short_term.get('last_final_items'))}\n")
 
-            # Kick off the pipeline
+            print("🚀 Starting shopping assistant pipeline...\n")
             raw_output = ShopAgent().crew().kickoff(inputs={
+                'user_id': str(session_user_id),
                 'target_item': user_data['target_item'],
                 'item_details': user_data['item_details'],
                 'short_term': short_term,
                 'long_term_preferences': long_prefs,
-                'episode_history': episode_history
             })
 
-            final_items = getattr(raw_output, 'result', None) or str(raw_output)
-            print("\n🔖 Final Recommendations:\n")
-            print(final_items)
+            import re
 
-            # Snapshot episode
-            episode = {
-                'user_id': session_user_id,
-                'query': user_data['target_item'],
+            # If output comes in Markdown format (```json ... ```)
+            def extract_json_block(text):
+                if not isinstance(text, str):
+                    return None
+                match = re.search(r"```json\s*(\{.*?\})\s*```", text, re.DOTALL)
+                return match.group(1) if match else text.strip()
+
+            parsed_items = next(
+                (t.raw for t in raw_output.tasks_output if t.name == "markdown_extraction_task"),
+                None
+            )
+
+            # Fallback if markdown_extraction_task didn't run
+            if not parsed_items and hasattr(raw_output, "final_output"):
+                parsed_items = raw_output.final_output
+
+            # Try parsing safely
+            try:
+                json_str = extract_json_block(parsed_items)
+                product_list = json.loads(json_str) if json_str else []
+            except Exception as e:
+                print(f"❌ Failed to parse final output: {e}")
+                product_list = []
+
+                    
+                print("\n🔖 Final Parsed Items:\n", product_list)
+
+            # 🧠 Save episode for later
+            episodes.append({
+                'user_id': str(session_user_id),
+                'query': f"{user_data['target_item']} - {user_data['item_details']}",
                 'item_details': user_data['item_details'],
-                'final_items': final_items,
-                'timestamp': datetime.now().isoformat()
-            }
-            memory_manager.append_episode(episode)
+                'final_items': product_list,
+                'timestamp': datetime.now().isoformat(),
+                'description': f"Shopping episode for {user_data['target_item']}"
+            })
 
-            # **Store this iteration’s final_items in short-term for next query**
-            memory_manager.write_short('last_final_items', final_items)
+            memory_manager.write_short('last_final_items', product_list)
 
             elapsed = (datetime.now() - start_time).total_seconds()
             print(f"\n✅ Completed in {elapsed:.1f}s\n")
 
         except Exception as e:
             print(f"\n❌ Error: {e}", file=sys.stderr)
-
-if __name__ == "__main__":
-    run()
