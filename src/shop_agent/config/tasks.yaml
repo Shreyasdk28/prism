@@ -6,7 +6,7 @@ memory_query_task:
       - item category: "{target_item}"
       - detailed product description: "{item_details}"
 
-    Construct a query using {target_item} and retrieve up to 3 semantically similar
+    Query using "{target_item}" and retrieve up to 3 semantically similar
     past shopping episodes for the same user_id "{user_id}" from the Qdrant collection `shopping_episodes`.
 
   expected_output: >
@@ -31,25 +31,29 @@ memory_query_task:
 
 preference_extraction_task:
   description: >
-    Parse the user’s input to extract structured preferences for the specified {target_item}.
-    Identify and capture:
-      – Desired color(s) (if any)
-      – Brand(s) (if any)
-      – Budget constraints (if any)
-      – Must-have features
-  expected_output: >
-    A JSON object (or dict) with the following keys:
-      1. “item”: the original {target_item}
-      2. “brand”: list of brand names or `null` if not implied
-      3. “preferred_colors”: list of color names or `null` if not mentioned
-      4. “budget”: object with “min” and “max” or `null` for no budget
-         - “min”: minimum price or `null` if not specified
-         - “max”: maximum price or `null` if not specified
-      5. “features”: list of feature keywords or `null` if none
-    You may infer from direct mention or common phrasing (e.g., “some black boAt earbuds” means brand=boAt, color=black).
-    Avoid guessing based on trends. Do not include preferences the user didn’t mention or imply.
+    Analyze and extract structured user preferences based on the provided product request.
+
+    Inputs:
+    - Target Item: {target_item}
+    - User Input: {item_details}
+    - Existing Long-Term Preferences (if any): {long_term_preferences}
+
+    Your task is to synthesize a detailed preference profile for the current shopping session by:
+    - Parsing direct or implied preferences from the user input
+    - Augmenting or reinforcing preferences using historical data (if applicable)
+    - Leaving any unspecified fields as null (do not assume defaults)
+
+    Specifically extract:
+    - Budget constraints (price range or affordability indicators)
+    - Color preferences
+    - Feature requirements (e.g., waterproof, noise cancellation, long battery life)
+    - Brand preferences (if any)
+    - Other explicitly stated needs (e.g., quantity, design, material)
+
+    Format your output strictly according to the UserPreference schema.
   agent: preference_extraction_agent
-  output_file: knowledge/user_preferences.json
+  expected_output: >
+    A structured JSON object matching the UserPreference model, with all preference fields clearly defined or set to null if unspecified.
 
 item_find_task:
   description: >
@@ -79,6 +83,7 @@ item_find_task:
     If available, also incorporate memory context:
     - Long-term preferences like preferred brands, features, budget ranges: {long_term_preferences}
     - Session-specific short-term refinements (if present): {short_term}
+    - User preferences from the current session: {user_preferences}
 
     Use this memory to improve relevance of the refined query and ensure the best matching results are retrieved.
  #   - Past episodes of similar product searches: {episode_history}
@@ -153,3 +158,15 @@ markdown_extraction_task:
 
   agent: markdown_parser_agent
   output_file: knowledge/parsed_items.txt
+
+save_to_db_task:
+  description: >
+    Save the user preferences to the database for future reference.
+    
+    Item Category: {target_item}
+    User Preferences: {user_preferences}
+    
+    Store these preferences in the long-term memory system so they can be
+    used for future searches of similar items.
+  agent: database_agent
+  expected_output: "Confirmation of preferences saved to database"

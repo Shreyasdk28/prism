@@ -15,6 +15,7 @@ dependencies = [
     "google-search-results>=2.4.2",
     "qdrant-client>=1.13.3",
     "sentence-transformers>=5.0.0",
+    "pymongo>=4.13.2",
 ]
 
 [project.scripts]

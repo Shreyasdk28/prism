@@ -7,6 +7,7 @@ from .tools.custom_tool import GoogleShoppingTool
 from shop_agent.tools.vector_tools import ShoppingMemorySearchTool
 from .models.model import UserPreference, ExtractedProductNames
 from typing import List
+from .tools.db_tool import SavePreferencesTool, GetPreferencesTool, ListAllPreferencesTool
 import os
 
 load_dotenv()
@@ -49,7 +50,7 @@ class ShopAgent():
     def preference_extraction_agent(self) -> Agent:
         return Agent(
             config=self.agents_config['preference_extraction_agent'],
-            verbose=True,
+            # verbose=True,
             # tools=tool,  # Using ComposioToolSet for SERPAPI_SEARCH
         )
     
@@ -74,6 +75,14 @@ class ShopAgent():
             config=self.agents_config['markdown_parser_agent'],
             verbose=True,
             # tools=[MarkdownParserTool()]  # Uncomment if you have a Markdown parser tool
+        )
+    
+    @agent
+    def database_agent(self) -> Agent:
+        return Agent(
+            config=self.agents_config['database_agent'],
+            verbose=True,
+            tools=[SavePreferencesTool(), GetPreferencesTool(), ListAllPreferencesTool()],
         )
 
     # To learn more about structured task outputs,
@@ -115,6 +124,14 @@ class ShopAgent():
             config=self.tasks_config['markdown_extraction_task'],
             output_pydantic=ExtractedProductNames,
             # output_file='parsed_report.json'  # Uncomment if you want to save parsed report
+        )
+    
+    @task
+    def save_to_db_task(self) -> Task:
+        return Task(
+            config=self.tasks_config['save_to_db_task'],
+            # Make sure the task has access to the inputs
+            inputs=['target_item', 'user_preferences']
         )
     
     @crew
