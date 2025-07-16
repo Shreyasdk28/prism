@@ -1,9 +1,11 @@
 from crewai.tools import BaseTool
-from typing import Type
-from pydantic import BaseModel, Field
+from typing import Type,Optional,List
+from pydantic import BaseModel, Field,ConfigDict
 from serpapi import GoogleSearch
-import os
-import json
+from qdrant_client import QdrantClient
+from sentence_transformers import SentenceTransformer
+import os, json
+from uuid import uuid4
 
 class GoogleShoppingInput(BaseModel):
     query: str = Field(..., description="The search query, e.g. 'wireless earphones under 1500 INR'")
@@ -52,15 +54,6 @@ class GoogleShoppingTool(BaseTool):
 
         return json.dumps(clean_results, ensure_ascii=False, indent=2)
     
-from typing import Optional
-from pydantic import ConfigDict
-from qdrant_client import QdrantClient
-from sentence_transformers import SentenceTransformer
-import os
-from uuid import uuid4
-from typing import List, Type
-
-from pydantic import BaseModel
 
 class QdrantUpsertInput(BaseModel):
     user_id: str
@@ -93,16 +86,7 @@ class QdrantCustomUpsertTool(BaseTool):
         )
         self.collection = "shopping_episodes"
         self.embedder = SentenceTransformer("all-MiniLM-L6-v2")  # 384-dim embeddings
-        # self.ensure_collection(vector_size=384)
-
-    # def ensure_collection(self, vector_size: int):
-    #     existing_collections = self.qdrant.get_collections().collections
-    #     if self.collection not in existing_collections:
-    #         self.qdrant.recreate_collection(
-    #             collection_name=self.collection,
-    #             vectors_config={"size": vector_size, "distance": "Cosine"},
-    #         )
-
+        
     def _run(
         self,
         user_id: str,

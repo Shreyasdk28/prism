@@ -43,18 +43,6 @@ class ShoppingMemorySearchTool(BaseTool):
             api_key=os.getenv("QDRANT_API_KEY")
         )
         self._embedder = SentenceTransformer("all-MiniLM-L6-v2")
-        # self.ensure_collection()
-
-    # def ensure_collection(self):
-    #     if not self._qdrant.collection_exists(self.collection_name):
-    #         print(f"🛠️ Creating collection: {self.collection_name}")
-    #         self._qdrant.create_collection(
-    #             collection_name=self.collection_name,
-    #             vectors_config=VectorParams(
-    #                 size=self.vector_dim,
-    #                 distance=Distance.COSINE
-    #             )
-    #         )
 
         # Ensure keyword index on user_id
         try:

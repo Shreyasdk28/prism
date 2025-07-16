@@ -91,14 +91,6 @@ def run():
                 print("\n👋 Exiting Smart Shopping Assistant. Goodbye!")
                 memory_manager.clear_short()
                 print("🧠 Short-term memory cleared.\n")
-
-                # ✅ Upload all episodes at once
-                # print("🧠 Uploading session memory to Qdrant...\n")
-                # for episode in episodes:
-                #     result = qdrant_tool._run(**episode)
-                #     print(f"🟢 Upsert status: {result}")
-
-                # print(f"✅ Uploaded {len(episodes)} episodes.\n")
                 break
             
             start_time = datetime.now()

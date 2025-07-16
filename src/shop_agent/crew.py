@@ -2,7 +2,6 @@ from crewai import Agent, Crew, Process, Task
 from crewai.project import CrewBase, agent, crew, task
 from composio_crewai import ComposioToolSet
 from dotenv import load_dotenv
-# from crewai_tools import ScrapegraphScrapeTool
 from .tools.custom_tool import GoogleShoppingTool
 from shop_agent.tools.vector_tools import ShoppingMemorySearchTool
 from .models.model import UserPreference, ExtractedProductNames
@@ -20,11 +19,6 @@ vector_query_tool = ShoppingMemorySearchTool()
 # scrape_tool = ScrapegraphScrapeTool(api_key=os.getenv("SCRAPEGRAPH_API_KEY"))
 composio_toolset = ComposioToolSet(api_key=os.getenv("COMPOSIO_API_KEY"))
 tool = composio_toolset.get_tools(actions=['SERPAPI_SEARCH'])
-# tools.append(scrape_tool)
-# tools.append(ScraperApiTool())
-# tools.append(AmazonSearchTool())
-# tools.append(AmazonProductDetailTool())
-# tools=Crawl4AITool()
 
 @CrewBase
 class ShopAgent():
