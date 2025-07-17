@@ -1,105 +1,166 @@
-# 🛒 Shop Agent: Context-Aware Multi-Agent Product Recommender (CrewAI)
+# Smart Shopping Assistant
 
-This project implements a **multi-agent AI system** using the [CrewAI](https://github.com/joaomdmoura/crewAI) framework to assist users in making optimized shopping decisions on Indian e-commerce platforms. The system comprises two specialized agents: one for precise product discovery and another for comparative decision-making based on multi-factor scoring.
-
----
-
-## 📌 Project Overview
-
-### 🔹 Agents
-
-#### 🕵️‍♂️ item_find Agent – *"{target_item} Parametric Hunter"*
-- **Goal**: Find products that best match user-defined specifications from `{item_details}`.
-- **Priority Criteria**:
-  1. ≥90% attribute match
-  2. Availability guarantees
-  3. Verified buyer media
-- **Backstory**: Built upon Zalando's precision search infrastructure with advanced fuzzy matching algorithms.
-
-#### ⚖️ compare_agent – *"{target_item} Decision Optimizer"*
-- **Goal**: Analyze and rank items from the item_find agent using a weighted scoring system.
-- **Scoring Factors**:
-  - 40% feature compliance
-  - 30% cost (price + shipping)
-  - 20% delivery reliability
-  - 10% review authenticity
-- **Backstory**: Powered Consumer Reports' decision guides with a “Triple-Layer Filter” system.
+This project implements a smart shopping assistant using **crewAI** to help users find products based on their preferences, compare items, and manage long-term shopping memories.
 
 ---
 
-## 📂 Tasks
+## 🛠️ Features
 
-### 🔍 `item_find_task`
-- **Description**: Search Indian e-commerce sites for `{target_item}` using `{item_details}`.
-- **Agent**: `item_find`
-- **Expected Output**: A JSON list of matched products (price, link, etc.)  
-- **Output File**: `output/results.json`
+### 1. Intelligent Product Search  
+Find products based on detailed user descriptions  
+(e.g., *"wireless earbuds, black, budget around $100, with noise cancellation"*).
 
-### 📊 `item_compare_task`
-- **Description**: Compare search results and generate decision insights.
-- **Agent**: `compare_agent`
-- **Expected Output**:
-  - Best Value
-  - Fastest Solution
-  - Premium Choice
-  - Comparison Matrix
-  - Fraud Risk Indicators  
-- **Output File**: `output/final_decision.md`
+### 2. Preference Extraction  
+Automatically parse user inputs to extract:
+- **Budget**
+- **Color**
+- **Features**
+
+### 3. Memory Management  
+- **Short‑term memory**: Stores recent session data.  
+- **Long‑term memory**: Saves and retrieves user preferences for specific product categories.  
+- **Episodic Memory (via Qdrant)**: Stores each shopping "episode" for historical context and future analysis.
+
+### 4. Agent‑Based Architecture  
+Leverages crewAI to orchestrate specialized agents:
+| Agent                   | Responsibility |
+|-------------------------|----------------|
+| Memory Query Agent      | Queries past shopping memories |
+| Preference Extraction Agent | Extracts structured preferences from natural language |
+| Item Find Agent         | Uses Google Shopping to find products |
+| Compare Agent           | Compares identified items |
+| Markdown Parser Agent   | Parses markdown output |
+| Database Agent          | Interacts with the preference database |
+
+### 5. Extensible Tools  
+Integrates with external tools like:
+- **ComposioToolSet** (for SERPAPI search)  
+- **GoogleShoppingTool**
 
 ---
 
-## ⚙️ Tech Stack
+## 📁 Project Structure
 
-- [CrewAI](https://github.com/joaomdmoura/crewAI)
-- Python 3.10+
-- Open-source LLM (e.g., OpenHermes, Llama2)
-- JSON/Markdown outputs
-- Local runtime (configurable for remote hosting)
+```
+
+.
+├── config/
+│   ├── agents.yaml
+│   └── tasks.yaml
+├── shop\_agent/
+│   ├── **init**.py
+│   ├── crew\.py
+│   ├── main.py
+│   ├── memory.py
+│   ├── models/
+│   │   └── model.py
+│   └── tools/
+│       ├── **init**.py
+│       ├── custom\_tool.py
+│       ├── db\_tool.py
+│       └── vector\_tools.py
+└── .env
+
+````
+
+---
+
+## ⚙️ Setup and Installation
+
+### Prerequisites
+- Python 3.9+
+- pip package manager
+
+### Steps
+1. **Clone the repository:**
+   ```bash
+   git clone <your-repository-url>
+   cd smart-shopping-assistant
+
+2. **Install crewAI:**
+   Follow crewAI docs (subject to change).
+
+3. **Install dependencies:**
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+4. **Set up environment variables:**
+   Create a `.env` file based on `.env.example`, e.g.:
+
+   ```env
+   COMPOSIO_API_KEY="your_composio_api_key_here"
+   # Add others as needed
+   ```
+
+5. **Configure Agents and Tasks:**
+   Customize `config/agents.yaml` and `config/tasks.yaml` for desired behavior.
 
 ---
 
 ## ▶️ How to Run
 
-1. **Clone the Repository**
-   ```bash
-   git clone https://github.com/your-username/shop-agent-crewai.git
-   cd shop-agent-crewai
-   ```
+Run the main script or use crewAI CLI:
 
-2. **Update `.env` File**
+```bash
+python shop_agent/main.py
+# or
+Crewai run
+```
 
-   Create or edit the `.env` file and add your compatible API keys:
+The assistant will prompt for:
 
-   ```
-   GEMINI_API_KEY=your_api_key_here
-   ```
+* **username**
+* **product category**
+* **specific needs**
 
-3. **Run the Agent Workflow**
+**Example Interaction:**
 
-   Make sure you're in the correct folder and your environment is activated (if applicable), then run:
+```
+👤 Enter your username: john_doe
+💡 Session started (UUID: <generated-uuid>)
 
-   ```bash
-   crewai run
-   ```
+Product category (e.g., wireless earbuds) or type 'exit' to quit: wireless earbuds
+Describe your needs (color, budget, must-have features):
+black, budget around $150, noise cancellation, good battery life
 
-   This will execute the two-agent system to find and evaluate the best products.
+📝 Parsed preferences: {
+  'budget': 150,
+  'color': 'black',
+  'features': ['noise_cancellation', 'good battery life'],
+  'raw_input': 'black, budget around $150, noise cancellation, good battery life'
+}
+
+🔍 Searching for wireless earbuds with specs...
+🔖 Final Recommendations:
+1. **Sony WF-1000XM4**
+   - Price: $120
+   - Features: noise cancellation, excellent battery life, black
+2. **Bose QuietComfort Earbuds II**
+   - Price: $145
+   - Features: world‑class noise cancellation, comfortable fit, black
+
+✅ Preferences saved.
+🔍 Retrieved preferences: { … }
+
+✅ Completed in X.Xs
+
+Type another product category or ‘exit’ to quit.
+
+👋 Goodbye!
+🧠 Short‑term memory cleared.
+```
 
 ---
 
-## 📁 Output Files
+## 📈 Extending the Project
 
-- `output/results.json`: Raw search results from `item_find_agent`
-- `output/final_decision.md`: Structured decision report from `compare_agent`
-
----
-
-## 🚀 Future Work
-
-- Add **context-passing mechanisms** like shared memory, agent history logs, and vector store-based context recall.
-- Introduce more agents such as:
-  - **Budget Agent** for lowest-cost suggestions
-  - **Fraud Detection Agent** for seller validation
-  - **User Feedback Agent** to adapt based on preferences
-- Enable **dynamic goal switching** and **multi-agent memory tracing**
+* **Add more tools:** Integrate with review sites, comparison services, etc.
+* **Enhance parsing:** Improve `parse_user_details` for nuance recognition.
+* **Improve comparisons:** Add deeper logic, score weighting, etc.
+* **Add UI:** Web or desktop front-end for user-friendly experience.
+* **Expand memory:** Experiment with other vector DBs or knowledge bases.
 
 ---
+
