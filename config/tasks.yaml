@@ -1,0 +1,181 @@
+memory_query_task:
+  description: >
+    Perform a semantic similarity search in the Qdrant vector database.
+
+    Use the user's current product interest:
+      - item category: "{target_item}"
+      - detailed product description: "{item_details}"
+
+    Query using "{target_item}" and retrieve up to 3 semantically similar
+    past shopping episodes for the same user_id "{user_id}" from the Qdrant collection `shopping_episodes`.
+
+  expected_output: >
+    If no relevant results are found, return:
+      {
+        "status": "no_results",
+        "message": "No matches found."
+      }
+
+    Otherwise, return a list of up to 3 matching episodes as JSON objects. Each must include:
+      - status: "success"
+      - user_id
+      - query
+      - item_details
+      - final_items
+      - timestamp
+      - description
+      - score
+
+  agent: memory_query_agent
+  async_execution: true
+  output_file: knowledge/memory_query.txt
+
+preference_extraction_task:
+  description: >
+    Analyze and extract structured user preferences based on the provided product request.
+
+    Inputs:
+    - Target Item: {target_item}
+    - User Input: {item_details}
+    - Existing Long-Term Preferences (if any): {long_term_preferences}
+
+    Your task is to synthesize a detailed preference profile for the current shopping session by:
+    - Parsing direct or implied preferences from the {item_details}
+    - Augmenting or reinforcing preferences using historical data that is {long_term_preferences} (if applicable)
+    - Leaving any unspecified fields as null (do not assume defaults)
+
+    Specifically extract:
+    - Budget constraints (price range or affordability indicators)
+    - Color preferences
+    - Feature requirements (e.g., waterproof, noise cancellation, long battery life)
+    - Brand preferences (if any)
+    - Other explicitly stated needs (e.g., quantity, design, material)
+
+    Format your output strictly according to the UserPreference schema.
+  agent: preference_extraction_agent
+  async_execution: true
+  output_file: knowledge/user_preferences.json
+  expected_output: >
+    A structured JSON object matching the UserPreference model, with all preference fields clearly defined or set to null if unspecified.
+
+item_find_task:
+  description: >
+    Step 1: If needed, improve the user-provided item description “{item_details}” using natural language to make it
+    more suitable for e-commerce search. Also use only raw strings for tool input arguments. Make sure you include important
+    item_details like brand, model, color, size, and any other relevant specifications. Do not include type or description fields.
+    While giving the input to the tool, the format should be like this:
+    "query": "wireless earphones under 1500 INR"
+    "location": "India"
+    Not like this:
+    "query": {{"description": "wireless...000 INR", "type": "str"}}
+    "location": {{"description": "India", "type": "str"}}
+
+    Step 2: Use the refined description to query Google Shopping via SerpAPI for “{target_item}”.
+
+    Step 3: From the results, collect structured product data:
+      - title
+      - price
+      - source
+      - product_link
+      - rating
+      - delivery
+
+    Ensure that only products from Indian e-commerce sources are included, and the results closely match
+    the user’s refined criteria.
+
+    If available, also incorporate memory context:
+    - Long-term preferences like preferred brands, features, budget ranges: {long_term_preferences}
+    - Session-specific short-term refinements (if present): {short_term}
+    - User preferences from the current session
+
+    Use this memory to improve relevance of the refined query and ensure the best matching results are retrieved.
+ #   - Past episodes of similar product searches: {episode_history}
+
+  expected_output: >
+    A JSON array of dictionaries. Each dictionary must contain:
+      - title
+      - price
+      - source
+      - product_link
+      - rating
+      - delivery
+    Do not return empty results. Do not wrap in markdown/code fences.
+
+  agent: item_find
+  context:  # This makes it sequential - waits for these tasks
+    - memory_query_task
+    - preference_extraction_task
+  output_file: output/results.json
+
+
+item_compare_task:
+  description: >
+    Analyze shopping results using available metadata to generate ranked product insights and list top 5 products or fewer.
+    
+    Primary context:
+    - Current user description: "{item_details}"
+    - Current product category: "{target_item}"
+    
+    Memory-enhanced context:
+    - Use user preferences from long-term memory if available: {long_term_preferences}
+    - Reference short-term memory to maintain continuity within this session: {short_term}
+    Combine all relevant memory sources with current inputs to ensure personalized, high-quality recommendations.
+    Prioritize matches on features like brand, color, price, delivery, and quality as inferred from both query and memory.
+   # - You may also use episodic memory (prior queries and decisions): {episode_history}
+
+   # Combine all relevant memory sources with current inputs to ensure personalized, high-quality recommendations.
+   # Prioritize matches on features like brand, color, price, delivery, and quality as inferred from both query and memory.
+    
+  expected_output: >
+    A markdown report that contains top 5 product recommendations based on the analysis.
+    Each recommendation should include:
+    1. Hyperlinked list of top 5 products that closely fit the item description with price and source.
+    2. A "Best Value" pick with justification.
+    3. A "Fastest Delivery" option using the delivery field.
+    4. A "Top Rated" pick based on price and rating.
+    5. A comparison matrix showing price and delivery details of all products.
+    Do not wrap the report in markdown or code fences.
+  agent: compare_agent
+  output_file: output/final_decision.md
+
+markdown_extraction_task:
+  description: >
+    You have been given a markdown-formatted document containing product recommendations
+    generated by a comparison agent. Your task is to extract a list of product names from
+    the top section of the document that represents the recommended items.
+
+    Extraction Rules:
+      - Focus only on product titles; ignore pricing, delivery time, links, emojis, or markdown formatting.
+      - Remove markdown syntax such as bold, italics, bullet points, numbered headers, and hyperlinks.
+      - Disregard any line breaks, promotional phrases, and extra descriptors (e.g. "Best Value", "Top Pick").
+      - Return at most 5 distinct product names that appear earliest in the recommendations list.
+      - Each name must be returned as a plain string — do not include structured fields or metadata.
+
+  expected_output: >
+    A flat list containing up to 5 product names as strings.
+
+    Format:
+    [
+      "Product Name 1",
+      "Product Name 2",
+      "Product Name 3",
+      ...
+    ]
+
+  agent: markdown_parser_agent
+  output_file: knowledge/parsed_items.txt
+
+save_to_db_task:
+  description: >
+    Save the user preferences to the database for future reference.
+    
+    Item Category: {target_item}
+    User Preferences
+    
+    Store these preferences in the long-term memory system so they can be
+    used for future searches of similar items.
+  agent: database_agent
+  context:  # This makes it sequential - waits for these tasks
+    - memory_query_task
+    - preference_extraction_task
+  expected_output: "Confirmation of preferences saved to database"
